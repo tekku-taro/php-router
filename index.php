@@ -14,10 +14,9 @@ $performTest->testPerformanceWithCache();
 $router = new Router(false);
 $router->loadRoutes();
 
-// $router->showTrees();
+$router->showTrees();
 $url = '/products';
 
 $result = $router->match($url, 'GET');
 
 print_r($result);
-

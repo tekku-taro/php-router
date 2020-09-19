@@ -20,16 +20,45 @@ class Router
      */
     protected $params = [];
 
+    /**
+     * ルート登録時に使うtemp配列
+     *
+     * @var array
+     */
     protected $routes = [];
 
 
     protected $routesPath;
+
+    /**
+     * キャッシュファイルパス
+     *
+     * @var string
+     */
     protected $cachePath;
+
+    /**
+     * キャッシュを使用するか
+     *
+     * @var bool
+     */
     protected $useCache;
 
+    /**
+     * デフォルトのオプション値
+     *
+     * @var array
+     */
     protected $defaultOptions =[
         'middleware' => ['web']
     ];
+
+    /**
+     * groupメソッド実行時に使用
+     *
+     * @var array
+     */
+    protected $group = [];
 
     public function __construct($useCache = true, $cachePath = __DIR__ .  '/../routes/cache')
     {
@@ -101,56 +130,72 @@ class Router
     public function showTrees()
     {
         $map = $this->map;
-        array_walk_recursive($map,function(&$item){
-            if(!is_array($item)){
+        array_walk_recursive($map, function (&$item) {
+            if (!is_array($item)) {
                 $mapValue = $this->mapValues[$item];
-                $item = $mapValue['callback'];
+                $item = $mapValue['callback'] . '[options:' . implode(';', $this->flattenArray($mapValue['options'])) . ']';
             }
         });
         print_r($map);
     }
 
+    protected function flattenArray($array)
+    {
+        $flattened = [];
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $flattened[] = $key . "=" . implode(",", $value);
+            } else {
+                $flattened[] = $key . "=" . $value;
+            }
+        }
+        return $flattened;
+    }
 
     public function clearTrees()
     {
         $this->map = [];
+        $this->mapValues = [];
     }
 
     protected function mergeOptions($options = [])
     {
-        if(!empty($options)){
+        if (!empty($options)) {
             return array_merge($this->defaultOptions, $options);
-
-        }else{
+        } else {
             return $this->defaultOptions;
         }
     }
 
     public function get($url, $callback, $options = [])
     {
-        $options = $this->mergeOptions($options);
         list($key, $value) =  $this->makeRoute('GET', $url, $callback, $options);
         $this->routes[$key][] = $value;
     }
     
     public function post($url, $callback, $options = [])
     {
-        $options = $this->mergeOptions($options);        
         list($key, $value) =  $this->makeRoute('POST', $url, $callback, $options);
         $this->routes[$key][] = $value;
     }
     
     public function put($url, $callback, $options = [])
     {
-        $options = $this->mergeOptions($options);        
         list($key, $value) =  $this->makeRoute('PUT', $url, $callback, $options);
         $this->routes[$key][] = $value;
     }
     
+    
+    public function delete($url, $callback, $options = [])
+    {
+        list($key, $value) =  $this->makeRoute('DELETE', $url, $callback, $options);
+        $this->routes[$key][] = $value;
+    }
+
     public function controller($url, $controller, $options = [])
     {
-        $param = explode('/',ltrim($url,'/'))[0] ;
-        if(empty($param)){
+        $param = explode('/', ltrim($url, '/'))[0] ;
+        if (empty($param)) {
             $param = 'id';
         }
         $this->get($url, $controller.'@index', $options);
@@ -162,20 +207,60 @@ class Router
         $this->put($url .'/:'. $param, $controller.'@update', $options);
         $this->delete($url .'/:'. $param, $controller.'@delete', $options);
     }
-    
-    public function delete($url, $callback, $options = [])
+
+
+    public function group($groupParam, $callback)
     {
-        $options = $this->mergeOptions($options);        
-        list($key, $value) =  $this->makeRoute('DELETE', $url, $callback, $options);
-        $this->routes[$key][] = $value;
+        $prefix = '';
+        $options = [];
+        foreach ($groupParam as $item => $itemValue) {
+            switch ($item) {
+                case 'prefix':
+                    $prefix = $itemValue;
+                    break;
+                case 'middleware':
+                    if (is_array($itemValue)) {
+                        $options['middleware'] = $itemValue;
+                    } else {
+                        $options['middleware'] = [$itemValue];
+                    }
+                    break;
+            }
+        }
+        
+        $this->pushGroupParam($prefix, $options);
+        
+        $callback($this);
+        
+        $this->popGroupParam($prefix, $options);
     }
-    
+
+    protected function popGroupParam($prefix, $options)
+    {
+        if (!empty($prefix)) {
+            array_pop($this->group['prefix']);
+        }
+        if (!empty($options)) {
+            array_pop($this->group['options']);
+        }
+    }
+
+    protected function pushGroupParam($prefix, $options)
+    {
+        if (!empty($prefix)) {
+            $this->group['prefix'][] = $prefix;
+        }
+        if (!empty($options)) {
+            $this->group['options'][] = $options;
+        }
+    }
+
     public function registerRoutes($routes = null)
     {
         if ($routes) {
             $this->setRoutes($routes);
         }
-        // print_r($this->routes);
+
         krsort($this->routes);
         $this->makeTrees($this->routes);
         $this->routes = [];
@@ -265,10 +350,10 @@ class Router
                     $this->setParams($paramName, $part);
                     return $__params[$paramName];
                 }
-                if(isset($__params[$paramName]['__node_val'])){
+                if (isset($__params[$paramName]['__node_val'])) {
                     $this->setParams($paramName, $part);
                     return $__params[$paramName];
-                }                
+                }
             } else {
                 // まだURLが続くならば要素は配列
                 if (is_array($value)) {
@@ -286,7 +371,6 @@ class Router
     /**
      * ルートパラメータ配列に値をセット
      * :id なら キー値は id となる
-     * ?を削除
      *
      * @param string $key
      * @param mixed $value
@@ -321,6 +405,7 @@ class Router
      *   'params' => [
      *     'id' => 111, // ルートパラメータならばパラメーター名をキーとした配列を返す
      *   ]
+     *   'options' => []
      * ]
      *
      * @param string $url
@@ -360,9 +445,9 @@ class Router
         $leaf = array_pop($parts);
 
         //?オプションのチェック
-        if(substr($leaf,-1) == '?'){
+        if (substr($leaf, -1) == '?') {
             $optionParam = true;
-            $lastParam = rtrim($leaf,'?');
+            $lastParam = rtrim($leaf, '?');
             $leaf = array_pop($parts);
         }
 
@@ -374,8 +459,8 @@ class Router
                 continue;
             } elseif ($part[0] == ':') {
                 $last = substr($part, -1);
-                if($last == '?'){
-                    throw new ErrorException(implode('/',$route['parts']) . '  ルートの途中にオプションパラメータを付けることはできません！');
+                if ($last == '?') {
+                    throw new ErrorException(implode('/', $route['parts']) . '  ルートの途中にオプションパラメータを付けることはできません！');
                 }
                 // ルートパラメータの場合, __paramsキー配下に登録
                 // "__params"=>[
@@ -400,52 +485,44 @@ class Router
 
 
         //最後にオプションパラメーターがある場合
-        if($optionParam){
+        if ($optionParam) {
             // URLパーツが登録済みならば
             if (isset($refNode[$leaf])) {
             } else { // URLパーツが未登録
                 $refNode[$leaf] = [];
             }
             // 参照ノードを一つ進める
-            $lastRefNode = &$refNode[$leaf];     
+            $lastRefNode = &$refNode[$leaf];
             
             // 末端パーツに対応するノードに葉の値をセット
-            $this->setLeafValToNode($lastRefNode,$lastParam,$route);  
-            // オプションなしの場合も登録          
-            $this->setLeafValToNode($refNode,$leaf,$route);            
-        }else{
+            $this->setLeafValToNode($lastRefNode, $lastParam, $route);
+            // オプションなしの場合も登録
+            $this->setLeafValToNode($refNode, $leaf, $route);
+        } else {
             // 末端パーツに対応するノードに葉の値をセット
-            $this->setLeafValToNode($refNode,$leaf,$route);
+            $this->setLeafValToNode($refNode, $leaf, $route);
         }
     }
 
     // 末端パーツに対応するノードに葉の値をセット
-    protected function setLeafValToNode(&$refNode,$leaf,$route)
+    protected function setLeafValToNode(&$refNode, $leaf, $route)
     {
         if (!isset($refNode[$leaf]) || !is_array($refNode[$leaf])) {
             if ($leaf[0] == ':') {
-                // ルートパラメータの場合, __paramsキー配下に登録
-                // "__params"=>[
-                //     ":name"=>"cli@name",
-                //     ":id"=>[
-                //         "show"=>"id@show"
-                //     ]
                 if (!isset($refNode['__params'])) {
                     $refNode['__params'] = [];
                 }
                 // 参照ノードを一つ進める
                 $refNode = &$refNode['__params'];
             }
-            if(isset($refNode[$leaf]) && is_array($refNode[$leaf])){
-                // $refNode[$leaf]['__node_val'] = $route['callback'];
+            if (isset($refNode[$leaf]) && is_array($refNode[$leaf])) {
                 $this->setNodeVal($refNode[$leaf]['__node_val'], $route);
-            }else{
-                // $refNode[$leaf] = $route['callback'];
-                $this->setNodeVal($refNode[$leaf], $route);                
+            } else {
+                $this->setNodeVal($refNode[$leaf], $route);
             }
         } else {
             $this->setNodeVal($refNode[$leaf]['__node_val'], $route);
-        }        
+        }
     }
 
     protected function setNodeVal(&$refNode, $route)
@@ -457,6 +534,11 @@ class Router
 
     protected function makeRoute($method, $path, $callback, $options)
     {
+        if (!empty($this->group)) {
+            $options = $this->addGroupOptions($options, $this->group['options']);
+            $path = $this->joinPath($this->group['prefix'], $path);
+        }
+        $options = $this->mergeOptions($options);
         if ($path == '/') {
             $parts = ['/'];
         } else {
@@ -465,15 +547,37 @@ class Router
         return [count($parts) ,["method"=> $method,"parts"=>$parts,"callback"=>$callback,"options"=>$options]];
     }
 
+    protected function addGroupOptions($options, $groupOptionsArray)
+    {
+        foreach ($groupOptionsArray as $key => $groupOptions) {
+            $options += $groupOptions;
+        }
+
+        return $options;
+    }
+
+    protected function joinPath($prefix, $path)
+    {
+        foreach ($prefix as $key => $value) {
+            if ($key == 0) {
+                $trimmed[] = rtrim($value, '/');
+                continue;
+            }
+            $trimmed[] = trim($value, '/');
+        }
+        $trimmed[] = trim($path);
+        return join('/', $trimmed);
+    }
+
     // ルート配列をパスのパーツの数ごとにグループ分け
     protected function sortRoutes($routes)
     {
         $sorted = [];
         foreach ($routes as  $data) {
             list($method, $path, $callback) = $data;
-            if(isset($data[3])){
+            if (isset($data[3])) {
                 $options = $this->mergeOptions($data[3]) ;
-            }else{
+            } else {
                 $options = $this->mergeOptions() ;
             }
             if ($path == '/') {

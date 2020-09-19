@@ -269,7 +269,7 @@ class RouterTest extends TestCase
             'options'=>$this->options
         ];
         $this->assertEquals($expected, $router->match($url, $method));
-    }   
+    }
     
     public function testController()
     {
@@ -368,6 +368,49 @@ class RouterTest extends TestCase
         ],
         'options'=>$this->options
     ];
+        $this->assertEquals($expected, $router->match($url, $method));
+    }
+
+    public function testGroup()
+    {
+        $router = new Router;
+        $router->group(['prefix'=>'order/:order_no','middleware'=>['admin']], function ($router) {
+            $router->get('/shipping', 'Shipping@index');
+            $router->group(['prefix'=>'payment'], function ($router) {
+                $router->delete('/credit/:code', 'Credit@delete');
+            });
+        });
+        $router->registerRoutes();
+
+        $method = 'GET';
+        $url = '/order/10/shipping';
+        $callback = 'Shipping@index';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [
+                'order_no'=>10
+            ],
+            'options'=>[
+                'middleware'=>['admin']
+            ]
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+
+        $method = 'DELETE';
+        $url = '/order/10/payment/credit/wojf23';
+        $callback = 'Credit@delete';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [
+                'order_no'=>10,
+                'code'=>'wojf23',
+            ],
+            'options'=>[
+                'middleware'=>['admin']
+            ]
+        ];
         $this->assertEquals($expected, $router->match($url, $method));
     }
 }
