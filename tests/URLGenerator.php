@@ -2,10 +2,12 @@
 
 class URLGenerator
 {
-    protected $letters = 'abcdefghijklmnopqrstuvwxyz-123456789';
-    protected $letLen;
     protected $params = [
-        ':id',':name',':role'
+        ':id',':name',':role',':tag',':image',':key',':class',':category',':rank',
+    ];
+    protected $parts = [
+        'users','books','products','tasks','images','profiles','ranks','orders',
+        'payments','news','articles','areas','categories','classes',
     ];
 
 
@@ -15,16 +17,9 @@ class URLGenerator
             return $this->params[random_int(0, count($this->params) -1)];
         }
 
-        $wdLen = random_int(3, 6);
-        $word = '';
-        for ($i=0; $i < $wdLen; $i++) {
-            $idx = random_int(0, $this->letLen-1);
-            $letter = $this->letters[$idx];
-            $word .= $letter;
-        }
-
-        return $word;
+        return $this->parts[random_int(0, count($this->parts) -1)];
     }
+
 
     protected function createUrl()
     {
@@ -43,7 +38,6 @@ class URLGenerator
 
     public function generateUrls($nums = 100)
     {
-        $this->letLen =strlen($this->letters);
         $this->urls = [];
     
         for ($i=0; $i < $nums; $i++) {
@@ -57,10 +51,20 @@ class URLGenerator
     {
         foreach ($this->urls as $key => $url) {
             // /e9l/dy76/8984/g8g/:id/:name
+    
             $sample = str_replace(':id', 123, $url);
             $sample = str_replace(':name', 'hoge', $sample);
             $sample = str_replace(':role', 'admin', $sample);
-            $sample = str_replace('/x', '/xx', $sample);
+            $sample = str_replace(':image', 'selfee', $sample);
+            $sample = str_replace(':rank', 'toptier', $sample);
+            $sample = str_replace(':category', 'clothes', $sample);
+            $sample = str_replace(':class', 'first', $sample);
+            $sample = str_replace(':tag', 'work', $sample);
+            $sample = str_replace(':key', 'lemon', $sample);
+
+            if ($key % 10 == 0) {
+                $sample = str_replace('/w', '/ww', $sample);
+            }
             $this->samples[] = $sample;
         }
     }

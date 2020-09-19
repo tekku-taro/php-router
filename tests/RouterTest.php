@@ -6,6 +6,10 @@ use Taro\Routing\Router;
 
 class RouterTest extends TestCase
 {
+    protected $options = [
+        'middleware' => ['web']
+    ];
+
     public function setUp():void
     {
     }
@@ -46,7 +50,8 @@ class RouterTest extends TestCase
         $expected = [
             'callback'  => null,
             'url' => $url,
-            'params' => []
+            'params' => [],
+            'options'=>[]
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
     }
@@ -61,7 +66,8 @@ class RouterTest extends TestCase
         $expected = [
             'callback'  => 'abc',
             'url' => $url,
-            'params' => []
+            'params' => [],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
         
@@ -69,7 +75,8 @@ class RouterTest extends TestCase
         $expected = [
             'callback'  => 'man@readme.ini',
             'url' => $url,
-            'params' => []
+            'params' => [],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
         
@@ -77,7 +84,8 @@ class RouterTest extends TestCase
         $expected = [
             'callback'  => 'apache2',
             'url' => $url,
-            'params' => []
+            'params' => [],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
     }
@@ -92,7 +100,8 @@ class RouterTest extends TestCase
         $expected = [
             'callback'  => null,
             'url' => $url,
-            'params' => []
+            'params' => [],
+            'options'=>[]
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
 
@@ -100,7 +109,8 @@ class RouterTest extends TestCase
         $expected = [
             'callback'  => null,
             'url' => $url,
-            'params' => []
+            'params' => [],
+            'options'=>[]
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
     }
@@ -117,7 +127,8 @@ class RouterTest extends TestCase
             'url' => $url,
             'params' => [
                 'id'=>123
-            ]
+            ],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
 
@@ -127,7 +138,8 @@ class RouterTest extends TestCase
             'url' => $url,
             'params' => [
                 'role'=>'admin'
-            ]
+            ],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $this->router->match($url, $method));
     }
@@ -149,7 +161,8 @@ class RouterTest extends TestCase
             'url' => $url,
             'params' => [
                 'id'=>50
-            ]
+            ],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $router->match($url, $method));
     }
@@ -171,10 +184,12 @@ class RouterTest extends TestCase
             'url' => $url,
             'params' => [
                 'id'=>50
-            ]
+            ],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $router->match($url, $method));
     }
+
 
 
     public function testPut()
@@ -194,7 +209,8 @@ class RouterTest extends TestCase
             'url' => $url,
             'params' => [
                 'id'=>50
-            ]
+            ],
+            'options'=>$this->options
         ];
         $this->assertEquals($expected, $router->match($url, $method));
     }
@@ -215,8 +231,143 @@ class RouterTest extends TestCase
             'url' => $url,
             'params' => [
                 'id'=>50
-            ]
+            ],
+            'options'=>$this->options
         ];
+        $this->assertEquals($expected, $router->match($url, $method));
+    }
+
+
+    
+    public function testOptionParam()
+    {
+        $router = new Router;
+
+        $method = 'GET';
+
+        $path='/user/:id?';
+        $callback = '?route';
+        $router->get($path, $callback);
+        $router->registerRoutes();
+
+        $url = '/user/50';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [
+                'id'=>50
+            ],
+            'options'=>$this->options
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+
+        $url = '/user';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [],
+            'options'=>$this->options
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+    }   
+    
+    public function testController()
+    {
+        $router = new Router;
+
+
+
+        $path='/tasks';
+        $controller = 'TasksController';
+        $router->controller($path, $controller);
+        $router->registerRoutes();
+
+        $method = 'GET';
+        $url = '/tasks/3';
+        $callback = $controller . '@show';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [
+                'tasks'=>3
+            ],
+            'options'=>$this->options
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+        
+        $method = 'GET';
+        $url = '/tasks';
+        $callback = $controller . '@index';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [],
+            'options'=>$this->options
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+        
+
+        $method = 'GET';
+        $url = '/tasks/4/edit';
+        $callback = $controller . '@edit';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [
+                'tasks'=>4
+            ],
+            'options'=>$this->options
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+
+        $method = 'GET';
+        $url = '/tasks/create';
+        $callback = $controller . '@create';
+        $expected = [
+            'callback'  => $callback,
+            'url' => $url,
+            'params' => [],
+            'options'=>$this->options
+        ];
+        $this->assertEquals($expected, $router->match($url, $method));
+
+
+        $method = 'POST';
+        $url = '/tasks';
+        $callback = $controller . '@store';
+        $expected = [
+        'callback'  => $callback,
+        'url' => $url,
+        'params' => [],
+        'options'=>$this->options
+    ];
+        $this->assertEquals($expected, $router->match($url, $method));
+
+
+        $method = 'PUT';
+        $url = '/tasks/3';
+        $callback = $controller . '@update';
+        $expected = [
+        'callback'  => $callback,
+        'url' => $url,
+        'params' => [
+            'tasks'=>3
+        ],
+        'options'=>$this->options
+    ];
+        $this->assertEquals($expected, $router->match($url, $method));
+
+        $method = 'DELETE';
+        $url = '/tasks/3';
+        $callback = $controller . '@delete';
+        $expected = [
+        'callback'  => $callback,
+        'url' => $url,
+        'params' => [
+            'tasks'=>3
+        ],
+        'options'=>$this->options
+    ];
         $this->assertEquals($expected, $router->match($url, $method));
     }
 }

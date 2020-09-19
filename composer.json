@@ -9,7 +9,8 @@
             "Taro\\":"src/"
         },
         "classmap": [
-            "./tests/URLGenerator.php"
+            "./tests/URLGenerator.php",
+            "./tests/Performance.php"
         ]
     },
     "authors": [

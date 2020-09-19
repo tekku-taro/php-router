@@ -1,10 +1,13 @@
 <?php
+// 課題：グルーピング機能を追加する
 
-$router->get('/products', 'Products@index');
+
+$router->get('/products', 'Products@index',['middleware'=>['auth','api']]);
 $router->post('/products', 'Products@store');
 $router->put('/products/:id', 'Products@update');
 $router->delete('/products/:id', 'Products@delete');
-
+$router->get('/users/:id?', '?route');
+$router->controller('/tasks','TaskController');
 $router->setRoutes([
     ["GET","/" , 'index.html'],
     ["GET","/etc/php5" , "php5"],

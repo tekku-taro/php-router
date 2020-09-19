@@ -3,6 +3,6 @@ require './vendor/autoload.php';
 
 $generator = new URLGenerator();
 
-$generator->generateUrls(5000);
+$generator->generateUrls(300);
 
 $generator->saveToFile();
