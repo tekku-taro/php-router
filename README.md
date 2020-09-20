@@ -32,23 +32,36 @@ Webアプリケーションでクライアントから送られたリクエス�
 ### リクエストメソッドと同名メソッドで各ルートを定義
 
 ```php
+// メソッド名('URLのパス', '登録したい値', [オプション配列])
 $router->post('/products', 'Products@store');
+
+// パラメータは :パラメータ名 で指定
 $router->put('/products/:id', 'Products@update');
 $router->delete('/products/:id', 'Products@delete');
-// 第３引数にオプションを指定
+
+// 第３引数のオプションにmiddlewareを指定
 $router->get('/products', 'Products@index', ['middleware'=>['auth','api']]);
 ```
 
 ### URL最後のパラメータをオプションに設定
 
 ```php
-$router->get('/users/:id?', '?route');
+// パラメータ名の末尾に ? を付けると、オプションになる
+$router->get('/users/:id?', 'routeWithOptionParam');
 ```
 
 ### controllerメソッドでCRUDの７つのメソッドへのルートを一括登録
 
 ```php
-$router->controller('/tasks', 'TaskController');
+$router->controller('/tasks', 'TasksController');
+// 以下のルートを登録
+// GET     /tasks              TasksController@index
+// GET     /tasks/:tasks       TasksController@show
+// GET     /tasks/create       TasksController@create
+// GET     /tasks/:tasks/edit  TasksController@edit
+// POST    /tasks              TasksController@store
+// PUT     /tasks/:tasks       TasksController@update
+// DELETE  /tasks/:tasks       TasksController@delete    
 ```
 
 ### 配列でルートを一括登録
@@ -57,7 +70,7 @@ $router->controller('/tasks', 'TaskController');
 $router->setRoutes([
     ["GET","/" , 'index.html'],
     ["GET","/etc/php5/abc/:role" , "role.php"],
-    ["GET","/etc/php5/cli/man/readme" , "man@readme.ini"],
+    ["GET","/etc/php5/cli/man/readme" , "man@readme.ini", ['middleware'=>'auth']],
 ]);
 ```
 
@@ -65,16 +78,17 @@ $router->setRoutes([
 
 #### groupパラメータ
 
-- `prefix`: 内部のルート定義に共通するURLを指定する
-- `middleware`:ルートに適用するミドルウェア名
+- `prefix`：　内部のルート定義に共通するURLを指定する
+- `middleware`：　ルートに適用するミドルウェア名
 
 ```php
+// group([グループパラメータ], function($router){  ここにルート定義文を記述   })
 $router->group(['prefix'=>'order/:order_no','middleware'=>'admin'], function ($router) {
-    $router->get('/shipping', 'Shipping@index'); //url(order/:order_no/shipping)
+    $router->get('/shipping', 'Shipping@index'); // url => order/:order_no/shipping
 
     // group は入れ子にできる
     $router->group(['prefix'=>'payment'], function ($router) {
-      $router->delete('/credit/:code', 'Credit@delete'); //url(order/:order_no/credit/:code)
+      $router->delete('/credit/:code', 'Credit@delete'); // url => order/:order_no/payment/credit/:code
     });
 });
 ```
