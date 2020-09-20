@@ -4,16 +4,36 @@ class Performance
 {
     protected $urls;
     protected $samples;
+    protected $tests;
     protected $routes;
     protected $results;
+    protected $treeCreatingTimes;
+    protected $routingTimes;
+    protected $numOfRuns = 5;
+    protected $timeStart;
+    protected $timeMid;
+    protected $timeEnd;
+
+    public function __construct()
+    {
+        $this->loadTestData();
+    }
 
     protected function loadTestData()
     {
         $this->urls = explode("\n", file_get_contents(__DIR__ . '/data/urls.csv')) ;
         $this->samples = explode("\n", file_get_contents(__DIR__ . '/data/samples.csv')) ;
-        shuffle($this->samples);
+        $this->pickTestSamples();
+        // shuffle($this->samples);
 
         $this->createRoutes();
+    }
+
+    protected function pickTestSamples()
+    {
+        for ($i=0; $i < $this->numOfRuns; $i++) {
+            $this->tests[] = $this->samples[array_rand($this->samples)];
+        }
     }
 
     protected function saveResults()
@@ -32,37 +52,51 @@ class Performance
 
     public function testPerformance()
     {
-        $this->loadTestData();
-        $this->timeStart();
-        $router = new Taro\Routing\Router();
-        $router->registerRoutes($this->routes);
-        
-        $this->timeMid();
-
-        foreach ($this->samples as $key => $sample) {
-            $this->results[] = ($router->match($sample));
+        for ($i=0; $i < $this->numOfRuns; $i++) {
+            $this->execPerfomance($i, false);
         }
-        $this->timeEnd();
 
         $this->showResults();
-        $this->saveResults();
     }
 
     public function testPerformanceWithCache()
     {
-        $this->timeStart();
-        $router = new Taro\Routing\Router();
-        $router->loadCache();
-        
-        $this->timeMid();
-
-        foreach ($this->samples as $key => $sample) {
-            $this->results[] = ($router->match($sample));
+        for ($i=0; $i < $this->numOfRuns; $i++) {
+            $this->execPerfomance($i, true);
         }
-        $this->timeEnd();
 
         $this->showResults(true);
     }
+    protected function execPerfomance($idx, $useCache)
+    {
+        $router = new Taro\Routing\Router($useCache);
+        $this->timeStart();
+        if ($useCache) {
+            $router->loadCache();
+        } else {
+            $router->registerRoutes($this->routes);
+        }
+
+        
+        $this->timeMid();
+
+        // foreach ($this->samples as $key => $sample) {
+        //     $this->results[] = ($router->match($sample));
+        // }
+        $this->results[] = ($router->match($this->tests[$idx]));
+
+        $this->timeEnd();
+
+        if (!$useCache) {
+            $router->saveCache();
+            $this->saveResults();
+        }
+
+        $this->treeCreatingTimes[] = $this->timeMid - $this->timeStart;
+        $this->routingTimes[] = $this->timeEnd - $this->timeMid;
+    }
+
+
 
     protected function showResults($useCache = false)
     {
@@ -70,8 +104,14 @@ class Performance
         if ($useCache) {
             $msg = 'キャッシュ使用';
         }
-        print $msg.'ルーティング作成時間：' . ($this->timeMid - $this->timeStart) . ' 秒' . PHP_EOL;
-        print $msg.'実行時間：' . ($this->timeEnd - $this->timeMid) . ' 秒' . PHP_EOL;
+        print $this->numOfRuns . "回の平均値：" . PHP_EOL;
+        print $msg.'ルーティング作成時間：' . $this->getAverage($this->treeCreatingTimes) . ' 秒' . PHP_EOL;
+        print $msg.'実行時間：' . $this->getAverage($this->routingTimes) . ' 秒' . PHP_EOL;
+    }
+
+    protected function getAverage($timeRecords)
+    {
+        return array_sum($timeRecords) / count($timeRecords);
     }
 
     protected function createRoutes()

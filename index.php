@@ -4,6 +4,7 @@ use Taro\Routing\Router;
 
 require './vendor/autoload.php';
 
+// パフォーマンステスト
 $performTest = new Performance();
 
 $performTest->testPerformance();
@@ -11,12 +12,13 @@ $performTest->testPerformance();
 $performTest->testPerformanceWithCache();
 
 
-$router = new Router(false);
-$router->loadRoutes();
+// 以下、Routerクラスの実行見本
+// $router = new Router(false);
+// $router->loadRoutes();
 
-$router->showTrees();
-$url = '/products';
+// $router->showTrees();
+// $url = '/products';
 
-$result = $router->match($url, 'GET');
+// $result = $router->match($url, 'GET');
 
-print_r($result);
+// print_r($result);
