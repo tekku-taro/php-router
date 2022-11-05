@@ -195,6 +195,73 @@ class Router
     }
 
     /**
+     * ルーティングテーブルを表示
+     *
+     * @return void
+     */
+    public function showTable()
+    {
+        // $rows = [];
+        $map = $this->map;
+
+        $mask = "|%6.6s |%-45.45s |%-25.25s |%-20.20s |\n";
+        printf($mask, 'Method', 'Url', 'Action', 'Options');
+        foreach ($map as $method => $subTree) {
+            if(is_array($subTree)) {
+                $results = $this->parseSubTree($subTree, '');
+                array_map(function($result)use($mask, $method){
+                    [
+                        'url' => $url,
+                        'action' => $action,
+                        'options' => $options,
+                    ] = $result;
+                    printf($mask, $method, $url, $action, $options);
+                }, $results);
+
+ 
+            }
+
+
+            // $rows[] = $row;
+        }
+        // print_r($rows);
+        // printf($mask, 'Method', 'Url', 'Action', 'Options');
+        // printf($mask, '1', 'A value that fits the cell');
+        // printf($mask, '2', 'A too long value the end of which will be cut off');        
+    }
+
+    private function parseSubTree(array $parent, $parentUrl)
+    {
+        $results = [];
+        foreach ($parent as $key => $children) {
+            $url = $parentUrl;
+            if($key === '__params') {
+                $results = array_merge($results, $this->parseSubTree($children, $url));
+                continue;
+            }
+            if($key !== '__node_val') {
+                $url .= ($key === '/')? $key : '/' . $key;
+            }
+            if(is_array($children)) {
+                $results = array_merge($results, $this->parseSubTree($children, $url));
+            } else {
+                $mapValue = $this->mapValues[$children];
+                $action = $mapValue['callback'];
+                if(is_callable($action)) {
+                    $action = 'callback';
+                }         
+                $options = implode(',', $this->flattenArray($mapValue['options']));  
+                $results[] = [
+                    'url' => $url,
+                    'action' => $action,
+                    'options' => $options,
+                ];        
+            }
+        }
+        return $results;
+    }
+
+    /**
      * ２次元配列を１次元配列に変換
      *
      * @param array $array
@@ -572,7 +639,14 @@ class Router
      */
     public function setRoutes($data)
     {
-        $this->routes += $this->sortRoutes($data);
+        $addingRoutes = $this->sortRoutes($data);
+        foreach ($addingRoutes as $partCount => $routes) {
+            if(isset($this->routes[$partCount])) {
+                $this->routes[$partCount] = array_merge($this->routes[$partCount], $routes);
+            }else {
+                $this->routes[$partCount] = $routes;
+            }
+        }
     }
 
     // $routesを元に多次元ツリー構造を生成
