@@ -204,7 +204,7 @@ class Router
         // $rows = [];
         $map = $this->map;
 
-        $mask = "|%6.6s |%-45.45s |%-25.25s |%-20.20s |\n";
+        $mask = "|%6.6s |%-45.45s |%-25.25s |%-20.20s\n";
         printf($mask, 'Method', 'Url', 'Action', 'Options');
         foreach ($map as $method => $subTree) {
             if(is_array($subTree)) {
